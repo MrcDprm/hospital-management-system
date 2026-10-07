@@ -1,0 +1,32 @@
+# CMake derleme çıktıları
+build/
+build-release/
+cmake-build-*/
+CMakeUserPresets.json
+
+# Derlenmiş dosyalar
+*.o
+*.obj
+*.exe
+*.dll
+*.a
+*.lib
+
+# windeployqt ve Inno Setup çıktıları
+dist/
+installer/Output/
+
+# Gizli bilgiler
+.env
+
+# Editör ve işletim sistemi dosyaları
+.vscode/
+.idea/
+*.user
+Thumbs.db
+.DS_Store
+
+# Veritabanı ve dışa aktarılan hasta verileri (gerçek kişisel veri asla depoya girmez)
+*.db
+*.sqlite
+*.csv
