@@ -1,0 +1,33 @@
+#pragma code_page(65001)
+#include <winver.h>
+
+IDI_ICON1 ICON "@CMAKE_SOURCE_DIR@/resources/icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION  @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041F04B0"
+        BEGIN
+            VALUE "CompanyName",      "Miraç Deprem"
+            VALUE "FileDescription",  "Hastane Yönetimi"
+            VALUE "FileVersion",      "@PROJECT_VERSION@"
+            VALUE "InternalName",     "HospitalManager"
+            VALUE "LegalCopyright",   "Copyright (c) 2026 Miraç Deprem - MIT License"
+            VALUE "OriginalFilename", "HospitalManager.exe"
+            VALUE "ProductName",      "Hastane Yönetimi"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x041F, 1200
+    END
+END
