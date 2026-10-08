@@ -1,6 +1,7 @@
 #include "services/DemoData.h"
 
 #include "core/Passwords.h"
+#include "core/Rules.h"
 #include "core/Schedule.h"
 #include "data/SqlUtil.h"
 #include "data/UserRepository.h"
@@ -10,33 +11,26 @@
 
 namespace {
 
+constexpr int PEDIATRICS = 2; // departments() sırasındaki çocuk ve kadın doğum bölümleri
+constexpr int GYNECOLOGY = 3;
 constexpr int PATIENT_COUNT = 1200; // hasta başına birkaç ziyaret düşsün (gerçekçi geçmiş)
 
 struct DepartmentSeed {
     const char *name, *location;
-    QStringList diagnoses; // bu bölümde sık konan ICD-10 tanıları
-    QStringList complaints;
+    QStringList diagnoses; // bu bölümde sık konan ICD-10 tanıları (şikâyet tanıdan seçilir)
 };
 
 const QList<DepartmentSeed> &departments()
 {
     static const QList<DepartmentSeed> list = {
-        {"Dahiliye", "A Blok, Zemin kat", {"I10", "E11.9", "E78.5", "K29.7", "D50.9", "E55.9", "J06.9"},
-         {"Halsizlik", "Baş ağrısı ve tansiyon yüksekliği", "Mide ağrısı", "Kontrol muayenesi", "Çabuk yorulma"}},
-        {"Kardiyoloji", "A Blok, 1. kat", {"I10", "I20.9", "I48", "R07.4", "I25.1", "I50.9"},
-         {"Göğüs ağrısı", "Çarpıntı", "Nefes darlığı", "Tansiyon kontrolü", "Efor sırasında yorulma"}},
-        {"Çocuk Sağlığı ve Hastalıkları", "B Blok, Zemin kat", {"J06.9", "J03.9", "H66.9", "A09", "Z00.1", "R50.9"},
-         {"Ateş", "Öksürük", "Kulak ağrısı", "İshal", "Rutin kontrol"}},
-        {"Kadın Hastalıkları ve Doğum", "B Blok, 1. kat", {"Z34.9", "N94.6", "N39.0", "Z00.0"},
-         {"Gebelik kontrolü", "Adet sancısı", "Yıllık kontrol", "İdrarda yanma"}},
-        {"Ortopedi ve Travmatoloji", "C Blok, Zemin kat", {"M54.5", "M17.9", "S93.4", "M25.5", "M54.2"},
-         {"Bel ağrısı", "Diz ağrısı", "Ayak bileği burkulması", "Boyun ağrısı", "Omuz ağrısı"}},
-        {"Göz Hastalıkları", "C Blok, 1. kat", {"H52.1", "H10.9", "Z01.0"},
-         {"Bulanık görme", "Gözde kızarıklık", "Gözlük kontrolü", "Gözde kaşıntı"}},
-        {"Kulak Burun Boğaz", "C Blok, 2. kat", {"J01.9", "J02.9", "J30.4", "H66.9", "R42"},
-         {"Boğaz ağrısı", "Burun tıkanıklığı", "Kulakta dolgunluk", "Baş dönmesi", "Horlama"}},
-        {"Dermatoloji", "A Blok, 2. kat", {"L70.0", "L20.9", "L50.9", "L40.9", "L30.9"},
-         {"Sivilce", "Ciltte kaşıntı", "Kızarıklık ve döküntü", "Ciltte pullanma"}},
+        {"Dahiliye", "A Blok, Zemin kat", {"I10", "E11.9", "E78.5", "K29.7", "D50.9", "E55.9", "J06.9"}},
+        {"Kardiyoloji", "A Blok, 1. kat", {"I10", "I20.9", "I48", "R07.4", "I25.1", "I50.9"}},
+        {"Çocuk Sağlığı ve Hastalıkları", "B Blok, Zemin kat", {"J06.9", "J03.9", "H66.9", "A09", "Z00.1", "R50.9"}},
+        {"Kadın Hastalıkları ve Doğum", "B Blok, 1. kat", {"Z34.9", "N94.6", "N39.0", "Z00.0"}},
+        {"Ortopedi ve Travmatoloji", "C Blok, Zemin kat", {"M54.5", "M17.9", "S93.4", "M25.5", "M54.2"}},
+        {"Göz Hastalıkları", "C Blok, 1. kat", {"H52.1", "H10.9", "Z01.0"}},
+        {"Kulak Burun Boğaz", "C Blok, 2. kat", {"J01.9", "J02.9", "J30.4", "H66.9", "R42"}},
+        {"Dermatoloji", "A Blok, 2. kat", {"L70.0", "L20.9", "L50.9", "L40.9", "L30.9"}},
     };
     return list;
 }
@@ -67,6 +61,26 @@ QList<PrescriptionItem> prescriptionFor(const QString &code)
         {"N94.6", {{"Naproksen", "550 mg", "Ağrı olduğunda, günde en fazla 2 kez", 5}}},
     };
     return map.value(code);
+}
+
+// Tanıyla uyumlu şikâyet (örnek veride şikâyet ve tanı birbirini tutsun)
+QString complaintFor(const QString &code)
+{
+    static const QHash<QString, QString> complaints = {
+        {"I10", "Baş ağrısı ve tansiyon yüksekliği"}, {"E11.9", "Çok su içme, sık idrara çıkma"},
+        {"E78.5", "Kontrol tahlilleri"}, {"K29.7", "Mide ağrısı ve yanma"}, {"D50.9", "Halsizlik, çabuk yorulma"},
+        {"E55.9", "Kas ve kemik ağrıları"}, {"J06.9", "Boğaz ağrısı, burun akıntısı"}, {"I20.9", "Eforla gelen göğüs ağrısı"},
+        {"I48", "Çarpıntı"}, {"R07.4", "Göğüs ağrısı"}, {"I25.1", "Kontrol muayenesi"}, {"I50.9", "Nefes darlığı, ayaklarda şişlik"},
+        {"J03.9", "Boğaz ağrısı ve ateş"}, {"H66.9", "Kulak ağrısı"}, {"A09", "İshal ve karın ağrısı"},
+        {"Z00.1", "Rutin kontrol"}, {"R50.9", "Ateş"}, {"Z34.9", "Gebelik kontrolü"}, {"N94.6", "Adet sancısı"},
+        {"N39.0", "İdrarda yanma"}, {"Z00.0", "Yıllık kontrol"}, {"M54.5", "Bel ağrısı"}, {"M17.9", "Diz ağrısı"},
+        {"S93.4", "Ayak bileği burkulması"}, {"M25.5", "Omuz ağrısı"}, {"M54.2", "Boyun ağrısı"},
+        {"H52.1", "Uzağı bulanık görme"}, {"H10.9", "Gözde kızarıklık ve çapaklanma"}, {"Z01.0", "Gözlük kontrolü"},
+        {"J01.9", "Burun tıkanıklığı, yüzde ağrı"}, {"J02.9", "Boğaz ağrısı"}, {"J30.4", "Hapşırma ve burun akıntısı"},
+        {"R42", "Baş dönmesi"}, {"L70.0", "Sivilce"}, {"L20.9", "Ciltte kaşıntı ve kuruluk"}, {"L50.9", "Kaşıntılı kabarıklıklar"},
+        {"L40.9", "Ciltte pullanma"}, {"L30.9", "Kızarıklık ve döküntü"},
+    };
+    return complaints.value(code, "Kontrol muayenesi");
 }
 
 QString diagnosisName(const QString &code)
@@ -219,7 +233,12 @@ bool load(Database &db, const QDateTime &now)
     // Hastalar
     const char *const allergies[] = {"Penisilin", "Aspirin", "Polen", "Fıstık", "Lateks", "Sülfonamid"};
     const char *const chronic[] = {"Hipertansiyon", "Tip 2 diyabet", "Astım", "Hipotiroidi", "Migren"};
-    QList<qint64> patients;
+    struct SeedPatient {
+        qint64 id;
+        int age;
+        bool female;
+    };
+    QList<SeedPatient> patients;
     QSet<QString> ids;
     for (int i = 0; i < PATIENT_COUNT; ++i) {
         const bool female = g.chance(52);
@@ -238,7 +257,7 @@ bool load(Database &db, const QDateTime &now)
                    g.chance(15) ? QString::fromUtf8(g.pick(allergies)) : QString(""),
                    g.chance(20) ? QString::fromUtf8(g.pick(chronic)) : QString("")}))
             return false;
-        patients << q.lastInsertId().toLongLong();
+        patients << SeedPatient{q.lastInsertId().toLongLong(), Rules::fullYears(birth, now.date()), female};
     }
 
     // Randevular: son 90 gün ve önümüzdeki 14 gün; geçmişte doluluk ~%45, gelecekte giderek azalır
@@ -251,7 +270,22 @@ bool load(Database &db, const QDateTime &now)
             for (const Schedule::Slot &slot : Schedule::daySlots(d, day, {}, QDateTime(day, QTime(0, 0)))) {
                 if (slot.state == Schedule::SlotState::Lunch || !g.chance(fill))
                     continue;
-                const qint64 patient = patients[g.between(0, patients.size() - 1)];
+                // Bölüme uygun hasta: çocuk polikliniğine 16 yaş altı, kadın doğuma yetişkin kadın, diğerlerine yetişkin
+                SeedPatient seed{};
+                for (int attempt = 0; attempt < 50; ++attempt) {
+                    const SeedPatient &candidate = patients[g.between(0, patients.size() - 1)];
+                    const int index = departmentOf.value(d.id);
+                    const bool fits = index == PEDIATRICS ? candidate.age < 16
+                                    : index == GYNECOLOGY ? candidate.female && candidate.age >= 16
+                                                          : candidate.age >= 16;
+                    if (fits) {
+                        seed = candidate;
+                        break;
+                    }
+                }
+                if (!seed.id)
+                    continue;
+                const qint64 patient = seed.id;
                 const QString key = QString::number(patient) + Sql::dateTime(slot.start);
                 if (patientBusy.contains(key))
                     continue;
@@ -272,10 +306,12 @@ bool load(Database &db, const QDateTime &now)
                 if (status != AppointmentStatus::Examined)
                     continue;
                 const qint64 appointment = q.lastInsertId().toLongLong();
-                const QString code = g.pick(dep.diagnoses);
+                QString code = g.pick(dep.diagnoses);
+                if (code == "Z34.9" && seed.age > 42)
+                    code = "Z00.0"; // gebelik takibi yaşa uygun olsun
                 if (!exec(q, "INSERT INTO examinations (appointment_id, patient_id, doctor_id, date, complaint, findings, "
                              "diagnosis_code, diagnosis_name, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                          {appointment, patient, d.id, Sql::dateTime(slot.start.addSecs(300)), g.pick(dep.complaints),
+                          {appointment, patient, d.id, Sql::dateTime(slot.start.addSecs(300)), complaintFor(code),
                            g.chance(50) ? QString("Genel durum iyi, bilinç açık.") : QString(""), code,
                            diagnosisName(code), g.chance(30) ? QString("Kontrol önerildi.") : QString("")}))
                     return false;
