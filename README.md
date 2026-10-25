@@ -113,13 +113,6 @@ ISCC installer\HospitalManager.iss
 - **Privacy in small details.** ID numbers are masked in lists, PDF and messages escape user text, CSV cells starting with `=` are made safe for Excel, and the session closes itself after 10 minutes of inactivity.
 - **Generating realistic sample data.** Departments, doctors, 1,200 patients with valid ID numbers and months of appointments, where complaints match diagnoses and patients fit the department (children go to paediatrics).
 
-## Future Plans
-
-- SMS or e-mail appointment reminders.
-- Lab results and file attachments.
-- Billing and insurance.
-- Multiple branches and a shared server database.
-
 ## License
 
 [MIT](LICENSE)

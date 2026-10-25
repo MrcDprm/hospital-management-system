@@ -113,13 +113,6 @@ ISCC installer\HospitalManager.iss
 - **Küçük ayrıntılarda gizlilik.** Kimlik numaraları listede maskeleniyor, PDF ve mesajlarda kullanıcı metni kaçışlanıyor, `=` ile başlayan CSV hücreleri Excel için zararsız hâle getiriliyor ve 10 dakika işlem yapılmazsa oturum kendiliğinden kapanıyor.
 - **Gerçekçi örnek veri üretmek.** Bölümler, doktorlar, geçerli kimlik numaralı 1.200 hasta ve aylarca randevu; şikâyet tanıyla uyumlu, hasta bölüme uygun (çocuklar çocuk polikliniğine gidiyor).
 
-## Gelecek Planları
-
-- SMS ya da e-postayla randevu hatırlatma.
-- Tahlil sonuçları ve dosya ekleri.
-- Faturalama ve sigorta.
-- Birden çok şube ve ortak sunucu veritabanı.
-
 ## Lisans
 
 [MIT](LICENSE)
